@@ -111,34 +111,115 @@ async function publishToPlatforms(article, options = {}) {
   return await publisher.publish(article, options);
 }
 
-function generateHtml(article, title) {
+function generateWechatHtml(article, title) {
   return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <title>${title}</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; line-height: 1.8; color: #333; }
-    h1 { color: #1a1a1a; font-size: 28px; border-bottom: 2px solid #007aff; padding-bottom: 10px; }
-    h2 { color: #2c2c2c; font-size: 22px; margin-top: 30px; }
-    h3 { color: #3c3c3c; font-size: 18px; }
-    p { margin: 15px 0; }
-    code { background: #f5f5f5; padding: 2px 6px; border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; }
-    pre { background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 8px; overflow-x: auto; }
-    pre code { background: none; padding: 0; color: inherit; }
-    blockquote { border-left: 4px solid #007aff; margin: 15px 0; padding: 10px 15px; background: #f8f9fa; color: #666; }
-    ul, ol { padding-left: 25px; }
-    li { margin: 8px 0; }
-    a { color: #007aff; }
-    strong { color: #007aff; }
-    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #888; font-size: 14px; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif; 
+      max-width: 800px; 
+      margin: 0 auto; 
+      padding: 20px; 
+      line-height: 1.8; 
+      color: #333;
+      background: #fff;
+    }
+    h1 { 
+      color: #1a1a1a; 
+      font-size: 30px; 
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 30px;
+      border-bottom: 3px solid #07c160;
+      padding-bottom: 20px;
+    }
+    h2 { 
+      color: #2c2c2c; 
+      font-size: 24px; 
+      margin-top: 35px; 
+      font-weight: 600;
+      border-left: 4px solid #07c160;
+      padding-left: 15px;
+    }
+    h3 { 
+      color: #3c3c3c; 
+      font-size: 20px;
+      font-weight: 600;
+      margin-top: 25px;
+    }
+    p { margin: 18px 0; }
+    code { 
+      background: #f5f5f5; 
+      padding: 3px 8px; 
+      border-radius: 4px; 
+      font-family: 'SF Mono', Consolas, 'Courier New', monospace;
+      font-size: 14px;
+      color: #e83e8c;
+    }
+    pre { 
+      background: #282c34; 
+      color: #abb2bf; 
+      padding: 20px; 
+      border-radius: 8px; 
+      overflow-x: auto; 
+      margin: 20px 0;
+    }
+    pre code { 
+      background: none; 
+      padding: 0; 
+      color: inherit;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    blockquote { 
+      border-left: 4px solid #07c160; 
+      margin: 20px 0; 
+      padding: 15px 20px; 
+      background: #f8f9fa; 
+      color: #666;
+      border-radius: 0 8px 8px 0;
+    }
+    blockquote p { margin: 0; }
+    ul, ol { padding-left: 30px; }
+    li { margin: 10px 0; }
+    a { color: #07c160; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    strong { color: #07c160; font-weight: 600; }
+    img { max-width: 100%; height: auto; border-radius: 8px; margin: 15px 0; }
+    .footer { 
+      margin-top: 50px; 
+      padding-top: 25px; 
+      border-top: 1px solid #eee; 
+      color: #999; 
+      font-size: 14px;
+      text-align: center;
+    }
+    .author { 
+      color: #07c160; 
+      font-weight: 600;
+    }
+    hr {
+      border: none;
+      border-top: 1px dashed #ddd;
+      margin: 30px 0;
+    }
   </style>
 </head>
 <body>
 ${article}
-<div class="footer">本文由AI写作助手生成</div>
+<hr>
+<div class="footer">
+  <p>本文由 <span class="author">AI写作助手</span> 自动整理</p>
+</div>
 </body>
 </html>`;
+}
+
+function generateHtml(article, title) {
+  return generateWechatHtml(article, title);
 }
 
 async function main() {
@@ -181,25 +262,50 @@ async function main() {
     } catch (e) {
       content = `URL: ${url}\n\n我的理解:\n${note}`;
     }
-  } else if (command === 'publish') {
-    // 发布模式
-    const articleFile = args[1];
-    if (!articleFile || !fs.existsSync(articleFile)) {
-      log('请提供要发布的文章文件路径', 'error');
+  } else if (command === 'batch') {
+    // 批量处理模式
+    const batchDir = args[1];
+    if (!batchDir || !fs.existsSync(batchDir)) {
+      log('请提供包含多个文件的目录', 'error');
       process.exit(1);
     }
     
-    content = fs.readFileSync(articleFile, 'utf-8');
-    const publishOptions = {
-      status: args.includes('--publish') ? 'publish' : 'draft',
-      title: args.find(a => a.startsWith('--title='))?.replace('--title=', '')
-    };
+    const files = fs.readdirSync(batchDir).filter(f => f.endsWith('.txt') || f.endsWith('.md'));
+    if (files.length === 0) {
+      log('目录中没有找到文本文件', 'error');
+      process.exit(1);
+    }
     
-    const results = await publishToPlatforms(content, publishOptions);
+    log(`📁 发现 ${files.length} 个文件，开始批量处理...`, 'info');
     
-    const successCount = results.filter(r => r.success).length;
-    log(`📊 发布完成: ${successCount}/${results.length} 成功`, 'info');
+    let successCount = 0;
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      log(`\n📄 处理 ${i + 1}/${files.length}: ${file}`, 'process');
+      
+      try {
+        const fileContent = fs.readFileSync(path.join(batchDir, file), 'utf-8');
+        const fileType = fileContent.includes('对话') || fileContent.includes('AI:') ? 'chat' : 'default';
+        const prompt = generateArticlePrompt(fileContent, fileType);
+        const article = await callOllama(prompt);
+        
+        const titleMatch = article.match(/^#\s+(.+)$/m);
+        const title = titleMatch ? titleMatch[1] : file.replace(/\.(txt|md)$/, '');
+        
+        fs.writeFileSync(path.join(OUTPUT_DIR, `${file.replace(/\.(txt|md)$/, '')}-文章.md`), article, 'utf-8');
+        fs.writeFileSync(path.join(OUTPUT_DIR, `${file.replace(/\.(txt|md)$/, '')}-文章.html`), generateWechatHtml(article, title), 'utf-8');
+        
+        successCount++;
+        log(`✅ ${file} 处理完成`, 'success');
+      } catch (e) {
+        log(`❌ ${file} 处理失败: ${e.message}`, 'error');
+      }
+    }
+    
+    log(`\n📊 批量处理完成: ${successCount}/${files.length} 成功`, 'info');
     process.exit(0);
+    
+  } else if (command === 'publish') {
     
 } else if (command === 'clipboard' || command === '-c') {
     try {
@@ -242,6 +348,7 @@ async function main() {
     log('  ai-writer clipboard                 # 直接读取剪贴板自动整理', 'info');
     log('  ai-writer <文件>                    # 读取文件内容', 'info');
     log('  ai-writer "<内容>"                  # 直接输入内容', 'info');
+    log('  ai-writer batch <目录>              # 批量处理多个文件', 'info');
     log('  ai-writer publish <文件>             # 发布文章到配置的平台', 'info');
     log('  ai-writer publish <文件> --publish  # 直接发布', 'info');
     log('\n💡 提示: 推荐使用 clipboard 模式最懒人！', 'process');

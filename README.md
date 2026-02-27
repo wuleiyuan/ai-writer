@@ -1,6 +1,6 @@
 # 🤖 AI-Writer
 
-[![Version](https://img.shields.io/badge/Version-v1.1.0-blue.svg)](https://github.com/wuleiyuan/ai-writer/releases)
+[![Version](https://img.shields.io/badge/Version-v1.2.0-blue.svg)](https://github.com/wuleiyuan/ai-writer/releases)
 [![Node](https://img.shields.io/badge/Node-18+-green.svg)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/wuleiyuan/ai-writer?style=social)](https://github.com/wuleiyuan/ai-writer/stargazers)
@@ -14,10 +14,11 @@
 | 特性 | 说明 |
 |------|------|
 | 📋 **一键整理** | 剪贴板/文件/URL 自动整理成文章 |
-| 🎨 **公众号格式** | 自动生成适合公众号的 HTML 样式 |
-| 🌐 **多平台发布** | 支持 WordPress、博客园一键发布 |
+| 🎨 **公众号格式** | 自动生成适合公众号的 HTML 样式（绿色主题） |
+| 🌐 **多平台发布** | 支持 WordPress、博客园、掘金、知乎、CSDN 一键发布 |
 | 🤖 **AI 驱动** | 调用 Ollama/Qwen 本地大模型 |
-| 📦 **开箱即用** | 零配置先体验，默认本地模型 |
+| 📦 **批量处理** | 支持批量处理多个文件 |
+| 📋 **懒人模式** | 复制粘贴即可自动整理 |
 
 ## 🚀 快速开始
 
@@ -54,12 +55,25 @@ cp .env.example .env
 # 📝 直接输入内容
 ./ai-writer.js "今天学习了什么..."
 
+# 📁 批量处理目录中的所有文件
+./ai-writer.js batch ./my-notes/
+
 # 📤 发布文章到配置的平台
 ./ai-writer.js publish 生成的markdown文件.md
 ./ai-writer.js publish 生成的markdown文件.md --publish  # 直接发布
 ```
 
 ## 📤 多平台发布
+
+### 支持的平台
+
+| 平台 | API支持 | 说明 |
+|------|---------|------|
+| WordPress | ✅ | REST API |
+| 博客园 | ✅ | XML-RPC |
+| 掘金 | ✅ | Cookie认证 |
+| 知乎 | ✅ | Cookie认证 |
+| CSDN | ✅ | Cookie认证 |
 
 ### 环境变量配置
 
@@ -73,6 +87,18 @@ export WP_PASSWORD=your-app-password
 export CNBLOGS_BLOGNAME=your-blog-name
 export CNBLOGS_USERNAME=your-username
 export CNBLOGS_PASSWORD=your-password
+
+# 掘金配置 (需要Cookie)
+export JUEJIN_COOKIE=your-cookie-string
+export JUEJIN_CSRF_TOKEN=your-csrf-token
+
+# 知乎配置 (需要Cookie)
+export ZHIHU_COOKIE=your-cookie-string
+export ZHIHU_Z_C0=your-z-c0-token
+
+# CSDN配置 (需要Cookie)
+export CSDN_COOKIE=your-cookie-string
+export CSDN_USERNAME=your-username
 ```
 
 ### 使用示例
@@ -81,7 +107,7 @@ export CNBLOGS_PASSWORD=your-password
 # 生成文章后一键发布
 ./ai-writer.js publish ~/ai-writer-output/2025-02-26-文章.md
 
-# 直接发布到 WordPress
+# 直接发布到所有配置的平台
 ./ai-writer.js publish article.md --publish
 ```
 
@@ -93,7 +119,10 @@ ai-writer/
 ├── publishers/            # 多平台发布模块
 │   ├── index.js         # 统一发布入口
 │   ├── wordpress.js      # WordPress 发布器
-│   └── cnblogs.js       # 博客园发布器
+│   ├── cnblogs.js       # 博客园发布器
+│   ├── juejin.js        # 掘金发布器
+│   ├── zhihu.js         # 知乎发布器
+│   └── csdn.js          # CSDN 发布器
 ├── package.json          # 项目配置
 └── .env.example         # 环境变量示例
 ```
@@ -106,19 +135,6 @@ ai-writer/
 | Llama 3 | `OLLAMA_MODEL=llama3:8b` | 可选 |
 | ChatGPT | `OPENAI_API_KEY=xxx` | 需要 API Key |
 
-## 📈 功能对比
-
-| 功能 | 免费版 | Pro 版 |
-|------|--------|--------|
-| 剪贴板整理 | ✅ | ✅ |
-| AI 对话整理 | ✅ | ✅ |
-| URL 内容整理 | ✅ | ✅ |
-| 公众号 HTML | ✅ | ✅ |
-| WordPress 发布 | ✅ | ✅ |
-| 博客园发布 | ✅ | ✅ |
-| 知乎发布 | 🚧 | ✅ |
-| 批量发布 | 🚧 | ✅ |
-
 ## 🛠️ 高级配置
 
 ### 公众号粘贴技巧
@@ -126,7 +142,7 @@ ai-writer/
 1. 用浏览器打开生成的 HTML 文件
 2. 全选复制内容
 3. 粘贴到公众号编辑器
-4. 样式会自动保留
+4. 样式会自动保留（绿色主题，更适合公众号）
 
 ### 自定义模型
 
@@ -137,6 +153,19 @@ OLLAMA_MODEL=llama3:8b ./ai-writer.js "你的内容"
 # 或修改 .env 文件
 OLLAMA_MODEL=glm4:9b
 ```
+
+### 批量处理
+
+将多个对话记录或笔记放到一个目录中：
+
+```bash
+./ai-writer.js batch ./my-ai-chats/
+```
+
+程序会：
+1. 读取目录中所有 `.txt` 和 `.md` 文件
+2. 逐个调用 AI 整理成文章
+3. 输出到 `~/ai-writer-output/` 目录
 
 ## 🤝 贡献
 

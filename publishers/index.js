@@ -5,6 +5,9 @@
 
 const WordPressPublisher = require('./wordpress');
 const CnBlogsPublisher = require('./cnblogs');
+const JuejinPublisher = require('./juejin');
+const ZhihuPublisher = require('./zhihu');
+const CSDNPublisher = require('./csdn');
 
 class MultiPublisher {
   constructor(publishersConfig = {}) {
@@ -22,6 +25,27 @@ class MultiPublisher {
       this.publishers.push({
         name: '博客园',
         publisher: new CnBlogsPublisher(publishersConfig.cnblogs)
+      });
+    }
+    
+    if (publishersConfig.juejin) {
+      this.publishers.push({
+        name: '掘金',
+        publisher: new JuejinPublisher(publishersConfig.juejin)
+      });
+    }
+    
+    if (publishersConfig.zhihu) {
+      this.publishers.push({
+        name: '知乎',
+        publisher: new ZhihuPublisher(publishersConfig.zhihu)
+      });
+    }
+    
+    if (publishersConfig.csdn) {
+      this.publishers.push({
+        name: 'CSDN',
+        publisher: new CSDNPublisher(publishersConfig.csdn)
       });
     }
   }
@@ -42,9 +66,9 @@ class MultiPublisher {
         results.push(result);
         
         if (result.success) {
-          console.log(`✅ ${name} 发布成功: ${result.url}`);
+          console.log(`✅ ${name} 发布成功: ${result.url || result.message}`);
         } else {
-          console.log(`❌ ${name} 发布失败: ${result.error}`);
+          console.log(`❌ ${name} 发布失败: ${result.error || result.message}`);
         }
       } catch (error) {
         console.log(`❌ ${name} 发布异常: ${error.message}`);
@@ -57,6 +81,18 @@ class MultiPublisher {
     }
     
     return results;
+  }
+
+  /**
+   * 发布到指定平台
+   * @param {string} platform - 平台名称
+   */
+  async publishTo(article, platform, options = {}) {
+    const target = this.publishers.find(p => p.name === platform);
+    if (!target) {
+      throw new Error(`未找到平台: ${platform}`);
+    }
+    return target.publisher.publish(article, options);
   }
 
   /**
@@ -91,6 +127,30 @@ function loadConfigFromEnv() {
     };
   }
   
+  // 掘金配置
+  if (process.env.JUEJIN_COOKIE) {
+    config.juejin = {
+      cookie: process.env.JUEJIN_COOKIE,
+      csrfToken: process.env.JUEJIN_CSRF_TOKEN
+    };
+  }
+  
+  // 知乎配置
+  if (process.env.ZHIHU_COOKIE || process.env.ZHIHU_Z_C0) {
+    config.zhihu = {
+      cookie: process.env.ZHIHU_COOKIE,
+      z_c0: process.env.ZHIHU_Z_C0
+    };
+  }
+  
+  // CSDN 配置
+  if (process.env.CSDN_COOKIE) {
+    config.csdn = {
+      cookie: process.env.CSDN_COOKIE,
+      username: process.env.CSDN_USERNAME
+    };
+  }
+  
   return config;
 }
 
@@ -98,5 +158,8 @@ module.exports = {
   MultiPublisher,
   WordPressPublisher,
   CnBlogsPublisher,
+  JuejinPublisher,
+  ZhihuPublisher,
+  CSDNPublisher,
   loadConfigFromEnv
 };
