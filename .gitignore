@@ -19,3 +19,7 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+
+# Workflow memory (personal)
+.workflow记忆.md
