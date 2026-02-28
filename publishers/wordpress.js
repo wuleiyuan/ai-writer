@@ -4,24 +4,31 @@
  */
 
 const axios = require('axios');
+const { BasePublisher } = require('./base');
 
-class WordPressPublisher {
+class WordPressPublisher extends BasePublisher {
   constructor(config) {
-    this.config = config;
+    super(config);
+    this.name = 'WordPress';
     this.siteUrl = config.siteUrl;
     this.username = config.username;
-    this.password = config.password; // 应用密码
+    this.password = config.password;
   }
 
-  async publish(article, options = {}) {
-    const { title, categories = [], tags = [], status = 'draft' } = options;
+  /**
+   * WordPress 内容转换
+   */
+  async transform(title, content) {
+    // 将 Markdown 转换为 HTML
+    let html = this.markdownToHtml(content);
+    return { title, content: html };
+  }
 
-    // 提取标题（从 Markdown 中）
-    const titleMatch = article.match(/^#\s+(.+)$/m);
-    const articleTitle = title || titleMatch?.[1] || 'AI 生成文章';
-
-    // 转换 Markdown 为 HTML（简单转换）
-    let content = article
+  /**
+   * Markdown 转 HTML
+   */
+  markdownToHtml(markdown) {
+    return markdown
       .replace(/^#\s+(.+)$/gm, '<h1>$1</h1>')
       .replace(/^##\s+(.+)$/gm, '<h2>$1</h2>')
       .replace(/^###\s+(.+)$/gm, '<h3>$1</h3>')
@@ -29,21 +36,27 @@ class WordPressPublisher {
       .replace(/\*(.+?)\*/g, '<em>$1</em>')
       .replace(/`(.+?)`/g, '<code>$1</code>')
       .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
-      .replace(/^\-(.+)$/gm, '<li>$1</li>')
-      .replace(/^\d+\.(.+)$/gm, '<li>$1</li>');
+      .replace(/^-\s+(.+)$/gm, '<li>$1</li>')
+      .replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>');
+  }
 
-    // 添加 WordPress 样式
-    content = `<div class="ai-article">${content}</div>`;
+  /**
+   * 执行发布
+   */
+  async publish(title, content, options = {}) {
+    const { categories = [], tags = [], status = 'draft' } = options;
+
+    const htmlContent = `<div class="ai-article">${content}</div>`;
 
     try {
       const response = await axios.post(
         `${this.siteUrl}/wp-json/wp/v2/posts`,
         {
-          title: articleTitle,
-          content: content,
-          status: status, // 'draft', 'publish', 'pending'
-          categories: categories,
-          tags: tags
+          title,
+          content: htmlContent,
+          status,
+          categories,
+          tags
         },
         {
           auth: {
@@ -60,7 +73,8 @@ class WordPressPublisher {
         success: true,
         platform: 'WordPress',
         url: response.data.link,
-        id: response.data.id
+        id: response.data.id,
+        message: status === 'publish' ? '已发布' : '已存为草稿'
       };
     } catch (error) {
       return {
@@ -69,6 +83,10 @@ class WordPressPublisher {
         error: error.response?.data?.message || error.message
       };
     }
+  }
+
+  isConfigured() {
+    return !!(this.siteUrl && this.username && this.password);
   }
 }
 

@@ -4,24 +4,28 @@
  */
 
 const axios = require('axios');
+const { BasePublisher } = require('./base');
 
-class CnBlogsPublisher {
+class CnBlogsPublisher extends BasePublisher {
   constructor(config) {
-    this.config = config;
-    this.blogId = config.blogId || '';
+    super(config);
+    this.name = '博客园';
+    this.blogName = config.blogName;
     this.username = config.username;
     this.password = config.password;
   }
 
-  async publish(article, options = {}) {
-    const { title, isMarkdown = true } = options;
-
-    // 提取标题
-    const titleMatch = article.match(/^#\s+(.+)$/m);
-    const articleTitle = title || titleMatch?.[1] || 'AI 生成文章';
-
+  /**
+   * 博客园内容转换
+   */
+  async transform(title, content) {
     // 简单转换 Markdown 为 HTML
-    let content = article
+    let html = this.markdownToHtml(content);
+    return { title, content: html };
+  }
+
+  markdownToHtml(markdown) {
+    return markdown
       .replace(/^#\s+(.+)$/gm, '<h1>$1</h1>')
       .replace(/^##\s+(.+)$/gm, '<h2>$1</h2>')
       .replace(/^###\s+(.+)$/gm, '<h3>$1</h3>')
@@ -29,26 +33,29 @@ class CnBlogsPublisher {
       .replace(/\*(.+?)\*/g, '<em>$1</em>')
       .replace(/`(.+?)`/g, '<code>$1</code>')
       .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
-      .replace(/^\-(.+)$/gm, '<li>$1</li>')
-      .replace(/^\d+\.(.+)$/gm, '<li>$1</li>');
+      .replace(/^-\s+(.+)$/gm, '<li>$1</li>')
+      .replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>');
+  }
 
-    // 博客园使用 MetaWeblog API
+  /**
+   * 执行发布
+   */
+  async publish(title, content, options = {}) {
     const postData = {
-      title: articleTitle,
+      title,
       description: content,
       mt_allow_comments: 1,
       mt_allow_pings: 1,
       post_type: 'post',
-      wp_slug: articleTitle.toLowerCase().replace(/\s+/g, '-')
+      wp_slug: title.toLowerCase().replace(/\s+/g, '-')
     };
 
     try {
-      // 博客园 MetaWeblog API 端点
-      const url = `https://rpc.cnblogs.com/metaweblog/${this.config.blogName || 'default'}`;
+      const url = `https://rpc.cnblogs.com/metaweblog/${this.blogName || 'default'}`;
       
       const response = await axios.post(url, {
         method: 'metaWeblog.newPost',
-        params: [this.blogId, this.username, this.password, postData, true],
+        params: ['', this.username, this.password, postData, true],
         id: 'jsonrpc'
       }, {
         headers: { 'Content-Type': 'application/json' }
@@ -59,7 +66,8 @@ class CnBlogsPublisher {
           success: true,
           platform: '博客园',
           url: response.data.result.permaLink,
-          id: response.data.result.postid
+          id: response.data.result.postid,
+          message: '发布成功'
         };
       } else {
         throw new Error(response.data?.error?.message || '发布失败');
@@ -71,6 +79,10 @@ class CnBlogsPublisher {
         error: error.message
       };
     }
+  }
+
+  isConfigured() {
+    return !!(this.blogName && this.username && this.password);
   }
 }
 
