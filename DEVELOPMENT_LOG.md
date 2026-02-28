@@ -47,19 +47,30 @@ GitHub 目录 (干净环境开发测试)
 - 支持风格: xhs(小红书)、zhihu(知乎)、juejin(掘金)、csdn(CSDN)
 - 用法: `ai-writer style xhs <内容>`
 
-### 2. 小红书发布支持
+### 2. 发布器基类重构
+
+- 新增 `publishers/base.js` 抽象基类
+- 所有平台适配器继承 BasePublisher
+- 统一生命周期: Transform -> Validate -> Execute
+- 各平台可重写 `transform()` 实现自定义转换
+
+### 3. 图片自动上传
+
+- 新增 `publishers/imageUploader.js`
+- 支持图床: SM.MS, ImgBB, GitHub
+- 自动处理文章中的本地图片
+
+### 4. 小红书发布支持
 
 - 新增 `publishers/xiaohongshu.js`
-- 支持生成小红书风格内容（emoji、标签）
-- 预留 API 接口（需企业认证）
 
-### 3. 多模型支持
+### 5. 多模型支持
 
 - **Ollama** - 本地免费模型 (默认)
 - **DeepSeek** - 免费额度多
 - **Kimi** - 免费额度
 - **OpenAI** - GPT 系列
-- 自动备用：如果默认模型失败，自动尝试其他配置的模型
+- 自动备用
 
 ### 3. 配置优化
 
