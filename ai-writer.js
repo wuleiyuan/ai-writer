@@ -209,7 +209,20 @@ ${content}`,
 ${content}`
   };
   
-  return typePrompts[type] || typePrompts.default;
+  // 平台风格后缀
+  const styleSuffix = {
+    xhs: '\\n\\n注意：用小红书风格写，标题要吸引眼球，多用emoji，段落要短，末尾加话题标签。',
+    zhihu: '\\n\\n注意：用知乎专栏风格写，语气专业理性，可以加"泻药"开头。',
+    juejin: '\\n\\n注意：用掘金技术文章风格写，简洁直接，干货为主。',
+    csdn: '\\n\\n注意：用CSDN博客风格写，通俗易懂，步骤详细。'
+  };
+  
+  let prompt = typePrompts[type] || typePrompts.default;
+  if (styleSuffix[type]) {
+    prompt = prompt.replace('输出为Markdown格式', '输出为Markdown格式' + styleSuffix[type]);
+  }
+  
+  return prompt;
 }
 
 async function publishToPlatforms(article, options = {}) {
@@ -423,9 +436,29 @@ async function main() {
     log(`\n📊 批量处理完成: ${successCount}/${files.length} 成功`, 'info');
     process.exit(0);
     
+  } else if (command === 'style') {
+    // 风格生成模式
+    const style = args[1]; // xhs, zhihu, juejin, csdn
+    const content = args.slice(2).join(' ');
+    if (!style || !content) {
+      log('用法: ai-writer style <风格> <内容>', 'error');
+      log('风格: xhs(小红书), zhihu(知乎), juejin(掘金), csdn(CSDN)', 'info');
+      process.exit(1);
+    }
+    log(`📄 生成${style}风格文章...`, 'info');
+    const prompt = generateArticlePrompt(content, style);
+    const article = await callAI(prompt);
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const platformNames = { xhs: '小红书', zhihu: '知乎', juejin: '掘金', csdn: 'CSDN' };
+    const fileName = path.join(OUTPUT_DIR, `${timestamp}-${platformNames[style] || style}.md`);
+    fs.writeFileSync(fileName, article, 'utf-8');
+    log(`✅ ${platformNames[style] || style}版本已保存: ${fileName}`, 'success');
+    console.log('\n' + article);
+    process.exit(0);
+    
   } else if (command === 'publish') {
     
-} else if (command === 'clipboard' || command === '-c') {
+  } else if (command === 'clipboard' || command === '-c') {
     try {
       content = execSync('pbpaste', { encoding: 'utf-8' }).trim();
       if (!content) {
@@ -467,6 +500,8 @@ async function main() {
     log('  ai-writer <文件>                    # 读取文件内容', 'info');
     log('  ai-writer "<内容>"                  # 直接输入内容', 'info');
     log('  ai-writer batch <目录>              # 批量处理多个文件', 'info');
+    log('  ai-writer style <风格> <内容>         # 生成指定风格文章(xhs/zhihu/juejin/csdn)', 'info');
+    log('  ai-writer publish <文件>             # 发布文章到配置的平台', 'info');
     log('  ai-writer publish <文件>             # 发布文章到配置的平台', 'info');
     log('  ai-writer publish <文件> --publish  # 直接发布', 'info');
     log('\n💡 提示: 推荐使用 clipboard 模式最懒人！', 'process');
