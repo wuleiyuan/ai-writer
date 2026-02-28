@@ -7,9 +7,24 @@ const path = require('path');
 const https = require('https');
 const http = require('http');
 
+// 模型配置
+const MODEL_PROVIDER = process.env.MODEL_PROVIDER || 'ollama'; // ollama, deepseek, kimi, openai
 const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen2.5:14b';
-const OUTPUT_DIR = path.join(process.env.HOME || process.env.USERPROFILE, 'ai-writer-output');
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen:7b-chat-q5_K_M';
+
+// DeepSeek 配置
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
+const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
+
+// Kimi 配置
+const KIMI_API_KEY = process.env.KIMI_API_KEY || '';
+const KIMI_MODEL = process.env.KIMI_MODEL || 'moonshot-v1-8k-vision-preview';
+
+// OpenAI 配置
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
+const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-3.5-turbo';
+
+const OUTPUT_DIR = '/Users/leiyuanwu/GitHub/ai-writer-output';
 
 // 多平台发布
 const { MultiPublisher, loadConfigFromEnv } = require('./publishers');
@@ -34,9 +49,46 @@ async function fetchUrlContent(url) {
   });
 }
 
-async function callOllama(prompt) {
-  log('🤖 调用AI整理中...', 'process');
+// 统一的 AI 调用函数
+async function callAI(prompt) {
+  log(`🤖 调用${getProviderName()}整理中...`, 'process');
   
+  try {
+    switch (MODEL_PROVIDER) {
+      case 'ollama':
+        return await callOllama(prompt);
+      case 'deepseek':
+        return await callDeepSeek(prompt);
+      case 'kimi':
+        return await callKimi(prompt);
+      case 'openai':
+        return await callOpenAI(prompt);
+      default:
+        return await callOllama(prompt);
+    }
+  } catch (error) {
+    log(`AI调用失败: ${error.message}`, 'error');
+    // 尝试备用模型
+    if (MODEL_PROVIDER === 'ollama' && (DEEPSEEK_API_KEY || KIMI_API_KEY)) {
+      log('尝试备用模型...', 'process');
+      if (DEEPSEEK_API_KEY) return await callDeepSeek(prompt);
+      if (KIMI_API_KEY) return await callKimi(prompt);
+    }
+    throw error;
+  }
+}
+
+function getProviderName() {
+  const names = {
+    ollama: 'Ollama (本地)',
+    deepseek: 'DeepSeek',
+    kimi: 'Kimi',
+    openai: 'OpenAI'
+  };
+  return names[MODEL_PROVIDER] || 'AI';
+}
+
+async function callOllama(prompt) {
   const response = await fetch(`${OLLAMA_HOST}/api/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -49,6 +101,72 @@ async function callOllama(prompt) {
   
   const data = await response.json();
   return data.response;
+}
+
+async function callDeepSeek(prompt) {
+  if (!DEEPSEEK_API_KEY) {
+    throw new Error('未配置 DEEPSEEK_API_KEY');
+  }
+  
+  const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: DEEPSEEK_MODEL,
+      messages: [{ role: 'user', content: prompt }],
+      stream: false
+    })
+  });
+  
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || '';
+}
+
+async function callKimi(prompt) {
+  if (!KIMI_API_KEY) {
+    throw new Error('未配置 KIMI_API_KEY');
+  }
+  
+  const response = await fetch('https://api.moonshot.cn/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${KIMI_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: KIMI_MODEL,
+      messages: [{ role: 'user', content: prompt }],
+      stream: false
+    })
+  });
+  
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || '';
+}
+
+async function callOpenAI(prompt) {
+  if (!OPENAI_API_KEY) {
+    throw new Error('未配置 OPENAI_API_KEY');
+  }
+  
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${OPENAI_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: OPENAI_MODEL,
+      messages: [{ role: 'user', content: prompt }],
+      stream: false
+    })
+  });
+  
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || '';
 }
 
 function generateArticlePrompt(content, type) {
@@ -287,7 +405,7 @@ async function main() {
         const fileContent = fs.readFileSync(path.join(batchDir, file), 'utf-8');
         const fileType = fileContent.includes('对话') || fileContent.includes('AI:') ? 'chat' : 'default';
         const prompt = generateArticlePrompt(fileContent, fileType);
-        const article = await callOllama(prompt);
+        const article = await callAI(prompt);
         
         const titleMatch = article.match(/^#\s+(.+)$/m);
         const title = titleMatch ? titleMatch[1] : file.replace(/\.(txt|md)$/, '');
@@ -356,7 +474,7 @@ async function main() {
   }
   
   const prompt = generateArticlePrompt(content, type);
-  const article = await callOllama(prompt);
+  const article = await callAI(prompt);
   
   const titleMatch = article.match(/^#\s+(.+)$/m);
   const title = titleMatch ? titleMatch[1] : 'AI学习文章';

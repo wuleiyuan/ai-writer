@@ -8,6 +8,7 @@ const CnBlogsPublisher = require('./cnblogs');
 const JuejinPublisher = require('./juejin');
 const ZhihuPublisher = require('./zhihu');
 const CSDNPublisher = require('./csdn');
+const XiaohongshuPublisher = require('./xiaohongshu');
 
 class MultiPublisher {
   constructor(publishersConfig = {}) {
@@ -46,6 +47,13 @@ class MultiPublisher {
       this.publishers.push({
         name: 'CSDN',
         publisher: new CSDNPublisher(publishersConfig.csdn)
+      });
+    }
+    
+    if (publishersConfig.xiaohongshu) {
+      this.publishers.push({
+        name: '小红书',
+        publisher: new XiaohongshuPublisher(publishersConfig.xiaohongshu)
       });
     }
   }
@@ -151,6 +159,14 @@ function loadConfigFromEnv() {
     };
   }
   
+  // 小红书配置
+  if (process.env.XIAOHONGSHU_COOKIE || process.env.XIAOHONGSHU_ACCESS_TOKEN) {
+    config.xiaohongshu = {
+      cookie: process.env.XIAOHONGSHU_COOKIE,
+      accessToken: process.env.XIAOHONGSHU_ACCESS_TOKEN
+    };
+  }
+  
   return config;
 }
 
@@ -161,5 +177,6 @@ module.exports = {
   JuejinPublisher,
   ZhihuPublisher,
   CSDNPublisher,
+  XiaohongshuPublisher,
   loadConfigFromEnv
 };
