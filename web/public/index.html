@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI-Writer | 智能写作助手</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary: #07c160;
+      --primary-dark: #05984a;
+      --bg: #f5f5f5;
+      --card: #ffffff;
+      --text: #333;
+      --text-light: #666;
+      --border: #e5e5e5;
+      --shadow: 0 2px 12px rgba(0,0,0,0.1);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    header {
+      background: linear-gradient(135deg, var(--primary), #04b56a);
+      color: white;
+      padding: 30px 0;
+      text-align: center;
+      border-radius: 0 0 20px 20px;
+      margin-bottom: 30px;
+    }
+
+    header h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+    }
+
+    header p {
+      opacity: 0.9;
+      font-size: 1.1em;
+    }
+
+    .main-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 900px) {
+      .main-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .card-title {
+      font-size: 1.3em;
+      font-weight: 600;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-title .icon {
+      font-size: 1.5em;
+    }
+
+    .input-group {
+      margin-bottom: 16px;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .input-group textarea,
+    .input-group select,
+    .input-group input[type="text"] {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      font-size: 15px;
+      transition: border-color 0.3s;
+      font-family: inherit;
+    }
+
+    .input-group textarea:focus,
+    .input-group select:focus,
+    .input-group input[type="text"]:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    textarea {
+      min-height: 150px;
+      resize: vertical;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+      background: #f0f0f0;
+      color: var(--text);
+    }
+
+    .btn-secondary:hover {
+      background: #e5e5e5;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .tab {
+      padding: 8px 16px;
+      border: 2px solid var(--border);
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 14px;
+    }
+
+    .tab.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .tab:hover:not(.active) {
+      border-color: var(--primary);
+    }
+
+    .output-area {
+      margin-top: 20px;
+    }
+
+    .output-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .output-content {
+      background: #fafafa;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      min-height: 300px;
+      max-height: 500px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
+    .output-content:empty::before {
+      content: '生成的文章将显示在这里...';
+      color: var(--text-light);
+    }
+
+    .preview-frame {
+      width: 100%;
+      height: 500px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      background: white;
+    }
+
+    .status {
+      padding: 12px 16px;
+      border-radius: 10px;
+      margin-top: 12px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .status.loading {
+      background: #fff3cd;
+      color: #856404;
+      display: block;
+    }
+
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      display: block;
+    }
+
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      display: block;
+    }
+
+    .platforms {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    .platform-tag {
+      padding: 6px 12px;
+      background: #e8f5e9;
+      color: var(--primary);
+      border-radius: 15px;
+      font-size: 13px;
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 30px;
+    }
+
+    .feature-card {
+      background: var(--card);
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+
+    .feature-card .icon {
+      font-size: 2.5em;
+      margin-bottom: 12px;
+    }
+
+    .feature-card h3 {
+      margin-bottom: 8px;
+    }
+
+    .feature-card p {
+      color: var(--text-light);
+      font-size: 14px;
+    }
+
+    .cover-generator {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .cover-preview {
+      margin-top: 16px;
+      text-align: center;
+    }
+
+    .cover-preview img {
+      max-width: 100%;
+      max-height: 300px;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+    }
+
+    footer {
+      text-align: center;
+      padding: 30px;
+      color: var(--text-light);
+      font-size: 14px;
+    }
+
+    footer a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>🤖 AI-Writer</h1>
+      <p>智能写作助手 | 一键生成公众号文章 | 多平台发布</p>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="main-layout">
+      <div class="left-panel">
+        <div class="card">
+          <div class="card-title">
+            <span class="icon">📝</span>
+            <span>输入内容</span>
+          </div>
+
+          <div class="tabs">
+            <div class="tab active" data-type="clipboard">📋 剪贴板</div>
+            <div class="tab" data-type="text">📄 文本输入</div>
+            <div class="tab" data-type="link">🔗 链接</div>
+            <div class="tab" data-type="video">📺 视频</div>
+          </div>
+
+          <div id="input-area">
+            <div class="input-group" id="text-input" style="display: none;">
+              <label>输入内容</label>
+              <textarea id="content" placeholder="请输入要整理的内容..."></textarea>
+            </div>
+
+            <div class="input-group" id="link-input" style="display: none;">
+              <label>文章链接</label>
+              <input type="text" id="url-input" placeholder="https://...">
+              <div style="margin-top: 12px;">
+                <label>我的理解（可选）</label>
+                <textarea id="note-input" placeholder="你对这篇文章的理解或笔记..." style="min-height: 80px;"></textarea>
+              </div>
+            </div>
+
+            <div class="input-group" id="video-input" style="display: none;">
+              <label>视频链接</label>
+              <input type="text" id="video-input-url" placeholder="B站或YouTube链接">
+            </div>
+
+            <div class="input-group">
+              <label>文章风格</label>
+              <select id="style-select">
+                <option value="">公众号默认</option>
+                <option value="xhs">小红书风格</option>
+                <option value="zhihu">知乎专栏风格</option>
+                <option value="juejin">掘金技术文章</option>
+                <option value="csdn">CSDN博客风格</option>
+              </select>
+            </div>
+
+            <div class="btn-group">
+              <button class="btn btn-primary" id="generate-btn">
+                ✨ 开始生成
+              </button>
+              <button class="btn btn-secondary" id="clear-btn">
+                🗑️ 清空
+              </button>
+            </div>
+
+            <div class="status" id="status"></div>
+          </div>
+        </div>
+
+        <div class="card cover-generator">
+          <div class="card-title">
+            <span class="icon">🎨</span>
+            <span>AI 封面生成</span>
+          </div>
+
+          <div class="input-group">
+            <label>文章标题</label>
+            <input type="text" id="cover-title" placeholder="输入文章标题生成封面">
+          </div>
+
+          <div class="input-group">
+            <label>关键词（可选）</label>
+            <input type="text" id="cover-keywords" placeholder="AI, 科技, 未来 (用逗号分隔)">
+          </div>
+
+          <button class="btn btn-secondary" id="generate-cover-btn">
+            🖼️ 生成封面
+          </button>
+
+          <div class="cover-preview" id="cover-preview"></div>
+        </div>
+      </div>
+
+      <div class="right-panel">
+        <div class="card">
+          <div class="card-title">
+            <span class="icon">📤</span>
+            <span>输出预览</span>
+          </div>
+
+          <div class="tabs">
+            <div class="tab active" data-view="markdown">Markdown</div>
+            <div class="tab" data-view="preview">公众号预览</div>
+          </div>
+
+          <div class="output-area">
+            <div class="output-toolbar">
+              <span id="article-title"></span>
+              <div class="btn-group">
+                <button class="btn btn-secondary" id="copy-btn" disabled>📋 复制</button>
+                <button class="btn btn-primary" id="download-btn" disabled>💾 下载</button>
+              </div>
+            </div>
+
+            <div id="markdown-output" class="output-content"></div>
+            <iframe id="preview-frame" class="preview-frame" style="display: none;"></iframe>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span class="icon">🚀</span>
+            <span>一键发布</span>
+          </div>
+
+          <p style="color: var(--text-light); margin-bottom: 12px;">
+            已配置的平台：
+          </p>
+          <div class="platforms" id="platforms-list">
+            <span style="color: var(--text-light);">加载中...</span>
+          </div>
+
+          <div class="btn-group" style="margin-top: 20px;">
+            <button class="btn btn-primary" id="publish-btn" disabled>
+              📤 发布到所有平台
+            </button>
+          </div>
+
+          <div class="status" id="publish-status"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="features">
+      <div class="feature-card">
+        <div class="icon">⚡</div>
+        <h3>快速生成</h3>
+        <p>AI 智能整理，秒级生成优质文章</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🎨</div>
+        <h3>多风格适配</h3>
+        <p>公众号、小红书、知乎、掘金一键切换</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">📺</div>
+        <h3>视频转文章</h3>
+        <p>B站、YouTube视频自动转文字文章</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🔗</div>
+        <h3>多平台发布</h3>
+        <p>一键分发到所有配置的内容平台</p>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>
+      Made with ❤️ by <a href="https://github.com/wuleiyuan/ai-writer">AI-Writer</a>
+      | <a href="https://github.com/wuleiyuan/ai-writer">GitHub</a>
+    </p>
+  </footer>
+
+  <script>
+    let currentType = 'clipboard';
+    let currentView = 'markdown';
+    let generatedArticle = '';
+    let generatedHtml = '';
+    let generatedTitle = '';
+
+    const statusEl = document.getElementById('status');
+    const contentEl = document.getElementById('content');
+    const markdownOutput = document.getElementById('markdown-output');
+    const previewFrame = document.getElementById('preview-frame');
+    const articleTitleEl = document.getElementById('article-title');
+    const copyBtn = document.getElementById('copy-btn');
+    const downloadBtn = document.getElementById('download-btn');
+    const publishBtn = document.getElementById('publish-btn');
+    const platformsList = document.getElementById('platforms-list');
+
+    document.querySelectorAll('.tabs .tab').forEach(tab => {
+      tab.addEventListener('click', function() {
+        const parent = this.parentElement;
+        parent.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+
+        const type = this.dataset.type;
+        const view = this.dataset.view;
+
+        if (type) {
+          currentType = type;
+          updateInputArea();
+        }
+        if (view) {
+          currentView = view;
+          updateOutputView();
+        }
+      });
+    });
+
+    function updateInputArea() {
+      document.getElementById('text-input').style.display = currentType === 'text' ? 'block' : 'none';
+      document.getElementById('link-input').style.display = currentType === 'link' ? 'block' : 'none';
+      document.getElementById('video-input').style.display = currentType === 'video' ? 'block' : 'none';
+    }
+
+    function updateOutputView() {
+      if (currentView === 'markdown') {
+        markdownOutput.style.display = 'block';
+        previewFrame.style.display = 'none';
+      } else {
+        markdownOutput.style.display = 'none';
+        previewFrame.style.display = 'block';
+      }
+    }
+
+    async function loadPlatforms() {
+      try {
+        const res = await fetch('/api/platforms');
+        const data = await res.json();
+        if (data.platforms.length > 0) {
+          platformsList.innerHTML = data.platforms.map(p =>
+            `<span class="platform-tag">${p}</span>`
+          ).join('');
+          publishBtn.disabled = false;
+        } else {
+          platformsList.innerHTML = '<span style="color: #999;">未配置任何平台</span>';
+        }
+      } catch (e) {
+        platformsList.innerHTML = '<span style="color: #999;">加载失败</span>';
+      }
+    }
+
+    async function handleGenerate() {
+      let content = '';
+      let type = 'default';
+
+      if (currentType === 'clipboard') {
+        try {
+          const clipboardData = await navigator.clipboard.readText();
+          content = clipboardData;
+          if (content.includes('http')) {
+            const urlMatch = content.match(/(https?:\/\/[^\s]+)/);
+            if (urlMatch) {
+              statusEl.className = 'status loading';
+              statusEl.textContent = '🔄 正在抓取网页内容...';
+              try {
+                const res = await fetch('/api/fetch-url', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ url: urlMatch[1] })
+                });
+                const data = await res.json();
+                content = `URL: ${urlMatch[1]}\n\n内容摘要:\n${data.content.substring(0, 5000)}`;
+              } catch (e) {
+                content = `URL: ${urlMatch[1]}\n\n内容:\n${content}`;
+              }
+            }
+          }
+          type = content.includes('对话') || content.includes('AI:') ? 'chat' : 'default';
+        } catch (e) {
+          statusEl.className = 'status error';
+          statusEl.textContent = '❌ 无法读取剪贴板，请手动粘贴内容';
+          return;
+        }
+      } else if (currentType === 'text') {
+        content = contentEl.value.trim();
+        if (!content) {
+          statusEl.className = 'status error';
+          statusEl.textContent = '❌ 请输入内容';
+          return;
+        }
+      } else if (currentType === 'link') {
+        const url = document.getElementById('url-input').value.trim();
+        const note = document.getElementById('note-input').value.trim();
+        if (!url) {
+          statusEl.className = 'status error';
+          statusEl.textContent = '❌ 请输入链接';
+          return;
+        }
+        statusEl.className = 'status loading';
+        statusEl.textContent = '🔄 正在抓取网页内容...';
+        try {
+          const res = await fetch('/api/fetch-url', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url })
+          });
+          const data = await res.json();
+          content = `URL: ${url}\n\n我的理解:\n${note}\n\n网页内容摘要:\n${data.content.substring(0, 5000)}`;
+        } catch (e) {
+          content = `URL: ${url}\n\n我的理解:\n${note}`;
+        }
+      } else if (currentType === 'video') {
+        const videoUrl = document.getElementById('video-input-url').value.trim();
+        if (!videoUrl) {
+          statusEl.className = 'status error';
+          statusEl.textContent = '❌ 请输入视频链接';
+          return;
+        }
+        statusEl.className = 'status loading';
+        statusEl.textContent = '🔄 正在解析视频内容...';
+        try {
+          const res = await fetch('/api/video-to-article', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: videoUrl })
+          });
+          const data = await res.json();
+          if (data.success) {
+            generatedArticle = data.markdown;
+            generatedHtml = data.html;
+            generatedTitle = data.title;
+            markdownOutput.textContent = generatedArticle;
+            articleTitleEl.textContent = generatedTitle;
+            previewFrame.srcdoc = generatedHtml;
+            copyBtn.disabled = false;
+            downloadBtn.disabled = false;
+            statusEl.className = 'status success';
+            statusEl.textContent = '✅ 视频文章生成成功！';
+            return;
+          } else {
+            throw new Error(data.error);
+          }
+        } catch (e) {
+          statusEl.className = 'status error';
+          statusEl.textContent = '❌ ' + e.message;
+          return;
+        }
+      }
+
+      const style = document.getElementById('style-select').value;
+
+      statusEl.className = 'status loading';
+      statusEl.textContent = '🤖 AI 正在生成文章，请稍候...';
+
+      try {
+        const res = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content, type, style })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          generatedArticle = data.markdown;
+          generatedHtml = data.html;
+          generatedTitle = data.title;
+
+          markdownOutput.textContent = generatedArticle;
+          articleTitleEl.textContent = generatedTitle;
+          previewFrame.srcdoc = generatedHtml;
+
+          copyBtn.disabled = false;
+          downloadBtn.disabled = false;
+
+          statusEl.className = 'status success';
+          statusEl.textContent = '✅ 文章生成成功！';
+        } else {
+          throw new Error(data.error);
+        }
+      } catch (e) {
+        statusEl.className = 'status error';
+        statusEl.textContent = '❌ 生成失败: ' + e.message;
+      }
+    }
+
+    document.getElementById('generate-btn').addEventListener('click', handleGenerate);
+
+    document.getElementById('clear-btn').addEventListener('click', () => {
+      contentEl.value = '';
+      document.getElementById('url-input').value = '';
+      document.getElementById('note-input').value = '';
+      document.getElementById('video-input-url').value = '';
+      markdownOutput.textContent = '';
+      articleTitleEl.textContent = '';
+      generatedArticle = '';
+      generatedHtml = '';
+      generatedTitle = '';
+      copyBtn.disabled = true;
+      downloadBtn.disabled = true;
+      statusEl.className = 'status';
+      statusEl.textContent = '';
+    });
+
+    copyBtn.addEventListener('click', async () => {
+      if (generatedArticle) {
+        await navigator.clipboard.writeText(generatedArticle);
+        statusEl.className = 'status success';
+        statusEl.textContent = '✅ 已复制到剪贴板！';
+      }
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      if (generatedArticle) {
+        const blob = new Blob([generatedArticle], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${generatedTitle || 'article'}.md`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    });
+
+    publishBtn.addEventListener('click', async () => {
+      if (!generatedArticle) {
+        document.getElementById('publish-status').className = 'status error';
+        document.getElementById('publish-status').textContent = '❌ 请先生成文章';
+        return;
+      }
+
+      const publishStatus = document.getElementById('publish-status');
+      publishStatus.className = 'status loading';
+      publishStatus.textContent = '🔄 正在发布到各平台...';
+
+      try {
+        const res = await fetch('/api/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ article: generatedArticle })
+        });
+
+        const data = await res.json();
+
+        if (data.results) {
+          const successCount = data.results.filter(r => r.success).length;
+          publishStatus.className = 'status success';
+          publishStatus.textContent = `✅ 发布完成：${successCount}/${data.results.length} 平台成功`;
+        } else {
+          publishStatus.className = 'status error';
+          publishStatus.textContent = '❌ ' + (data.error || '发布失败');
+        }
+      } catch (e) {
+        publishStatus.className = 'status error';
+        publishStatus.textContent = '❌ ' + e.message;
+      }
+    });
+
+    document.getElementById('generate-cover-btn').addEventListener('click', async () => {
+      const title = document.getElementById('cover-title').value.trim();
+      const keywords = document.getElementById('cover-keywords').value.trim();
+
+      if (!title) {
+        alert('请输入文章标题');
+        return;
+      }
+
+      const preview = document.getElementById('cover-preview');
+      preview.innerHTML = '<p>🔄 正在生成封面...</p>';
+
+      try {
+        const res = await fetch('/api/generate-cover', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, keywords })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          preview.innerHTML = `<img src="${data.imageUrl}" alt="封面图">`;
+        } else {
+          preview.innerHTML = '<p style="color: red;">❌ ' + data.error + '</p>';
+        }
+      } catch (e) {
+        preview.innerHTML = '<p style="color: red;">❌ 生成失败</p>';
+      }
+    });
+
+    loadPlatforms();
+  </script>
+</body>
+</html>
