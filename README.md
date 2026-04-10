@@ -7,6 +7,8 @@
 
 > 🇨🇳 中文 | [English](./README_EN.md)
 
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/wuleiyuan/ai-writer?quickstart=1)
+
 **AI 写作助手** - 一键将 AI 学习记录、文章链接整理成公众号文章，支持多平台发布！
 
 ## ✨ 核心特性
