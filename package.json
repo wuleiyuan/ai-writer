@@ -8,6 +8,7 @@
   },
   "scripts": {
     "start": "node ai-writer.js",
+    "build": "node --check ai-writer.js && node --check web/server.js",
     "web": "node web/server.js",
     "dev:web": "nodemon web/server.js",
     "check": "node --check ai-writer.js && node --check web/server.js"
