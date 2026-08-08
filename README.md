@@ -1,6 +1,6 @@
 # 🤖 AI-Writer
 
-[![Version](https://img.shields.io/badge/Version-v1.3.0-blue.svg)](https://github.com/wuleiyuan/ai-writer/releases)
+[![Version](https://img.shields.io/badge/Version-v1.3.1-blue.svg)](https://github.com/wuleiyuan/ai-writer/releases)
 [![Node](https://img.shields.io/badge/Node-18+-green.svg)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/wuleiyuan/ai-writer?style=social)](https://github.com/wuleiyuan/ai-writer/stargazers)
