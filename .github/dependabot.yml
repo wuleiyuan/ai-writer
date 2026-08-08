@@ -1,0 +1,23 @@
+# Dependabot 自动更新配置
+# 安全更新（security updates）默认对所有启用 GitHub Security 的仓库生效；
+# 此文件额外开启版本更新，保持依赖新鲜。
+
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "saturday"
+      time: "09:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+    groups:
+      production-deps:
+        dependency-type: "production"
+      dev-deps:
+        dependency-type: "development"
